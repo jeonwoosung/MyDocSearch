@@ -10,6 +10,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
@@ -17,6 +18,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class SearchService {
             try (IndexReader reader = DirectoryReader.open(directory)) {
                 IndexSearcher searcher = new IndexSearcher(reader);
                 Query textQuery;
+                Query titleRawQuery = null;
 
                 if ("*:*".equals(queryText)) {
                     textQuery = new org.apache.lucene.search.MatchAllDocsQuery();
@@ -60,11 +63,21 @@ public class SearchService {
                             },
                             new StandardAnalyzer()
                     );
-                    textQuery = parser.parse(queryText);
+                    textQuery = parser.parse(QueryParser.escape(queryText));
+                    String normalized = queryText.toLowerCase().replace("*", "").replace("?", "").trim();
+                    if (!normalized.isEmpty()) {
+                        titleRawQuery = new WildcardQuery(new Term(IndexService.FIELD_TITLE_RAW, "*" + normalized + "*"));
+                    }
                 }
 
                 BooleanQuery.Builder builder = new BooleanQuery.Builder();
-                builder.add(textQuery, BooleanClause.Occur.MUST);
+                if (titleRawQuery != null) {
+                    builder.add(textQuery, BooleanClause.Occur.SHOULD);
+                    builder.add(titleRawQuery, BooleanClause.Occur.SHOULD);
+                    builder.setMinimumNumberShouldMatch(1);
+                } else {
+                    builder.add(textQuery, BooleanClause.Occur.MUST);
+                }
 
                 if (kind != null && !kind.isBlank() && !"all".equalsIgnoreCase(kind)) {
                     builder.add(new TermQuery(new Term(IndexService.FIELD_KIND, kind.toLowerCase())), BooleanClause.Occur.FILTER);

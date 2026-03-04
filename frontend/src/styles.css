@@ -132,6 +132,18 @@ pre.preview {
   font-size: 13px;
 }
 
+.drm-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.drm-list h3 {
+  margin: 0 0 4px;
+}
+
 @media (max-width: 900px) {
   .split { grid-template-columns: 1fr; }
 }

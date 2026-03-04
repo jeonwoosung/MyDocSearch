@@ -1,5 +1,6 @@
 package com.example.mailsearch.controller;
 
+import com.example.mailsearch.dto.DrmFileItemResponse;
 import com.example.mailsearch.dto.IndexOperationResponse;
 import com.example.mailsearch.dto.IndexRequest;
 import com.example.mailsearch.dto.IndexStatusResponse;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/index")
@@ -24,6 +27,11 @@ public class IndexController {
     @GetMapping("/status")
     public IndexStatusResponse status() {
         return indexService.status();
+    }
+
+    @GetMapping("/drm-files")
+    public List<DrmFileItemResponse> drmFiles() {
+        return indexService.drmFiles();
     }
 
     @PostMapping("/rebuild")

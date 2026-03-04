@@ -17,6 +17,8 @@ docker compose up -d --build
 `docker-compose.yml`에서 아래 호스트 경로를 컨테이너 `/data/documents`로 마운트합니다.
 - `/Users/jeon-useong/ownCloud/Documents`
 
+색인 관리 화면의 루트 경로 입력값은 Docker 실행 시 반드시 `/data/documents`를 사용하세요.
+
 원하면 해당 경로를 다른 폴더로 변경할 수 있습니다.
 
 ### 4) 중지

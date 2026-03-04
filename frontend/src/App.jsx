@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   fetchStatus,
+  fetchDrmFiles,
   rebuildIndex,
   updateIndex,
   deleteIndex,
@@ -9,13 +10,14 @@ import {
   downloadUrl
 } from './api'
 
-const DEFAULT_ROOT = '/Users/jeon-useong/ownCloud/Documents'
+const DEFAULT_ROOT = '/data/documents'
 
 export default function App() {
   const [tab, setTab] = useState('search')
 
   const [rootPath, setRootPath] = useState(DEFAULT_ROOT)
   const [status, setStatus] = useState(null)
+  const [drmFiles, setDrmFiles] = useState([])
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busyAction, setBusyAction] = useState('')
@@ -37,8 +39,20 @@ export default function App() {
     }
   }
 
+  const refreshDrmFiles = async () => {
+    try {
+      const files = await fetchDrmFiles()
+      setDrmFiles(files)
+      setError('')
+    } catch (e) {
+      setDrmFiles([])
+      setError(e.message || 'DRM 파일 목록 조회에 실패했습니다.')
+    }
+  }
+
   useEffect(() => {
     refreshStatus()
+    refreshDrmFiles()
   }, [])
 
   const onRebuild = async () => {
@@ -48,6 +62,7 @@ export default function App() {
       setMessage(`${res.message} (eml: ${res.emlCount}, 첨부: ${res.attachmentCount}, 파일: ${res.fileCount ?? 0})`)
       setError('')
       refreshStatus()
+      refreshDrmFiles()
     } catch (e) {
       setError(e.message || '재색인에 실패했습니다.')
     } finally {
@@ -62,6 +77,7 @@ export default function App() {
       setMessage(`${res.message} (eml: ${res.emlCount}, 첨부: ${res.attachmentCount}, 파일: ${res.fileCount ?? 0})`)
       setError('')
       refreshStatus()
+      refreshDrmFiles()
     } catch (e) {
       setError(e.message || '증분 갱신에 실패했습니다.')
     } finally {
@@ -79,6 +95,7 @@ export default function App() {
       setSelected(null)
       setError('')
       refreshStatus()
+      refreshDrmFiles()
     } catch (e) {
       setError(e.message || '색인 삭제에 실패했습니다.')
     } finally {
@@ -138,6 +155,7 @@ export default function App() {
               {busyAction === 'delete' ? '삭제 중...' : '색인 삭제'}
             </button>
             <button className="action" onClick={refreshStatus} disabled={!!busyAction}>상태 새로고침</button>
+            <button className="action" onClick={refreshDrmFiles} disabled={!!busyAction}>DRM 목록 새로고침</button>
           </div>
           {busyAction && <p>작업을 처리 중입니다. 첨부파일이 많으면 시간이 오래 걸릴 수 있습니다.</p>}
           {message && <p>{message}</p>}
@@ -151,6 +169,17 @@ export default function App() {
               <div>최근 색인 시각: {status.lastIndexedAt || '-'}</div>
             </div>
           )}
+          <div className="drm-list">
+            <h3>DRM 파일 목록 ({drmFiles.length})</h3>
+            {drmFiles.length === 0 && <div className="meta">DRM 파일이 없습니다.</div>}
+            {drmFiles.map((item) => (
+              <div className="item" key={item.id}>
+                <div><strong>{item.title}</strong></div>
+                <div className="meta">{item.path}</div>
+                <div className="meta">{new Date(item.lastModified).toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

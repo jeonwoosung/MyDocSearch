@@ -29,6 +29,10 @@ export async function fetchStatus() {
   return request('/index/status')
 }
 
+export async function fetchDrmFiles() {
+  return request('/index/drm-files')
+}
+
 export async function rebuildIndex(rootPath) {
   return request('/index/rebuild', {
     method: 'POST',

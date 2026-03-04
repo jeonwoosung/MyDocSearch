@@ -1,6 +1,7 @@
 package com.example.mailsearch.service;
 
 import com.example.mailsearch.config.AppProperties;
+import com.example.mailsearch.dto.DrmFileItemResponse;
 import com.example.mailsearch.dto.IndexOperationResponse;
 import com.example.mailsearch.dto.IndexStatusResponse;
 import com.example.mailsearch.model.AttachmentInfo;
@@ -19,6 +20,8 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -47,6 +50,7 @@ public class IndexService {
     public static final String FIELD_ID = "id";
     public static final String FIELD_KIND = "kind";
     public static final String FIELD_TITLE = "title";
+    public static final String FIELD_TITLE_RAW = "titleRaw";
     public static final String FIELD_SUBJECT = "subject";
     public static final String FIELD_FROM = "from";
     public static final String FIELD_TO = "to";
@@ -210,6 +214,38 @@ public class IndexService {
         }
     }
 
+    public List<DrmFileItemResponse> drmFiles() {
+        synchronized (lock) {
+            try (Directory directory = openDirectory()) {
+                if (!DirectoryReader.indexExists(directory)) {
+                    return List.of();
+                }
+
+                try (IndexReader reader = DirectoryReader.open(directory)) {
+                    IndexSearcher searcher = new IndexSearcher(reader);
+                    BooleanQuery.Builder builder = new BooleanQuery.Builder();
+                    builder.add(new TermQuery(new Term(FIELD_KIND, KIND_FILE)), BooleanClause.Occur.FILTER);
+                    builder.add(new TermQuery(new Term(FIELD_IS_DRM, "true")), BooleanClause.Occur.FILTER);
+
+                    TopDocs topDocs = searcher.search(builder.build(), reader.maxDoc());
+                    List<DrmFileItemResponse> items = new java.util.ArrayList<>();
+                    for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+                        Document doc = searcher.doc(scoreDoc.doc);
+                        items.add(new DrmFileItemResponse(
+                                doc.get(FIELD_ID),
+                                doc.get(FIELD_TITLE),
+                                doc.get(FIELD_EML_PATH),
+                                Long.parseLong(doc.get(FIELD_LAST_MODIFIED))
+                        ));
+                    }
+                    return items;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("DRM 파일 목록 조회 중 오류가 발생했습니다. 원인: " + rootCauseMessage(e), e);
+            }
+        }
+    }
+
     private void removeDeletedDocuments(IndexWriter writer, Set<String> existingPaths) throws Exception {
         try (Directory directory = openDirectory()) {
             if (!DirectoryReader.indexExists(directory)) {
@@ -261,7 +297,9 @@ public class IndexService {
         long modifiedMillis = Files.getLastModifiedTime(emlPath).toMillis();
 
         Document emlDoc = baseDoc(emlPath, KIND_EML, -1, modifiedMillis, false);
-        emlDoc.add(new TextField(FIELD_TITLE, fileName(emlPath), Field.Store.YES));
+        String emlTitle = fileName(emlPath);
+        emlDoc.add(new TextField(FIELD_TITLE, emlTitle, Field.Store.YES));
+        emlDoc.add(new StringField(FIELD_TITLE_RAW, emlTitle.toLowerCase(), Field.Store.YES));
         emlDoc.add(new TextField(FIELD_SUBJECT, nullSafe(parsed.getSubject()), Field.Store.YES));
         emlDoc.add(new TextField(FIELD_FROM, nullSafe(parsed.getFrom()), Field.Store.YES));
         emlDoc.add(new TextField(FIELD_TO, nullSafe(parsed.getTo()), Field.Store.YES));
@@ -272,7 +310,9 @@ public class IndexService {
         int attachmentCount = 0;
         for (AttachmentInfo attachment : parsed.getAttachments()) {
             Document attachmentDoc = baseDoc(emlPath, KIND_ATTACHMENT, attachment.getIndex(), modifiedMillis, false);
-            attachmentDoc.add(new TextField(FIELD_TITLE, nullSafe(attachment.getName()), Field.Store.YES));
+            String attachmentTitle = nullSafe(attachment.getName());
+            attachmentDoc.add(new TextField(FIELD_TITLE, attachmentTitle, Field.Store.YES));
+            attachmentDoc.add(new StringField(FIELD_TITLE_RAW, attachmentTitle.toLowerCase(), Field.Store.YES));
             attachmentDoc.add(new TextField(FIELD_SUBJECT, nullSafe(parsed.getSubject()), Field.Store.YES));
             attachmentDoc.add(new TextField(FIELD_FROM, nullSafe(parsed.getFrom()), Field.Store.YES));
             attachmentDoc.add(new TextField(FIELD_TO, nullSafe(parsed.getTo()), Field.Store.YES));
@@ -299,7 +339,9 @@ public class IndexService {
         }
 
         Document fileDoc = baseDoc(filePath, KIND_FILE, -1, modifiedMillis, isDrm);
-        fileDoc.add(new TextField(FIELD_TITLE, fileName(filePath), Field.Store.YES));
+        String title = fileName(filePath);
+        fileDoc.add(new TextField(FIELD_TITLE, title, Field.Store.YES));
+        fileDoc.add(new StringField(FIELD_TITLE_RAW, title.toLowerCase(), Field.Store.YES));
         fileDoc.add(new TextField(FIELD_SUBJECT, "", Field.Store.YES));
         fileDoc.add(new TextField(FIELD_FROM, "", Field.Store.YES));
         fileDoc.add(new TextField(FIELD_TO, "", Field.Store.YES));
