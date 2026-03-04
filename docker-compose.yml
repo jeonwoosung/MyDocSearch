@@ -9,7 +9,7 @@ services:
       APP_EML_ROOT: "/data/documents"
       APP_INDEX_DIR: "/app/data/index"
     volumes:
-      - "/Users/jeon-useong/ownCloud/Documents:/data/documents:ro"
+      - "/data/owncloud/_data/files/admin/files/Documents:/data/documents:ro"
       - backend_index:/app/data/index
     restart: unless-stopped
 
