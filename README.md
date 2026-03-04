@@ -1,0 +1,36 @@
+# EML + Document Index/Search (Spring Boot + React)
+
+## Docker 실행
+사전 요구사항: Docker Desktop
+
+### 1) 컨테이너 시작
+```bash
+cd "/Users/jeon-useong/Documents/New project"
+docker compose up -d --build
+```
+
+### 2) 접속
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8080
+
+### 3) 색인 루트
+`docker-compose.yml`에서 아래 호스트 경로를 컨테이너 `/data/documents`로 마운트합니다.
+- `/Users/jeon-useong/ownCloud/Documents`
+
+원하면 해당 경로를 다른 폴더로 변경할 수 있습니다.
+
+### 4) 중지
+```bash
+docker compose down
+```
+
+## 지원 범위
+- EML 본문 + 첨부파일 텍스트 색인
+- 일반 문서 파일 색인(pdf/docx/xlsx/pptx/txt/csv 등)
+- DRM 파일 처리: 파일 시작이 `SCDSA`면 본문 파싱 없이 파일명만 색인 + DRM 표시
+
+## 관리 기능
+- 전체 재색인
+- 증분 갱신
+- 색인 삭제
+- 상태 조회(eml/첨부/문서 개수)

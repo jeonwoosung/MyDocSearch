@@ -1,0 +1,6 @@
+server:
+  port: 8080
+
+app:
+  eml-root: "/Users/jeon-useong/ownCloud/Documents"
+  index-dir: "./data/lucene-index"

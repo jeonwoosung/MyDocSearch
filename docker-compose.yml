@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: mail-search-backend
+    ports:
+      - "8080:8080"
+    environment:
+      APP_EML_ROOT: "/data/documents"
+      APP_INDEX_DIR: "/app/data/index"
+    volumes:
+      - "/Users/jeon-useong/ownCloud/Documents:/data/documents:ro"
+      - backend_index:/app/data/index
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: mail-search-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_index:

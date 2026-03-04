@@ -1,0 +1,141 @@
+html, body, #root {
+  height: 100%;
+}
+
+:root {
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+  color: #1f2937;
+  background: linear-gradient(130deg, #e2e8f0, #f8fafc 38%, #dbeafe);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 28px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tabs button {
+  border: 0;
+  background: #0f172a;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  opacity: .75;
+}
+
+.tabs button.active { opacity: 1; }
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.split {
+  height: calc(100vh - 170px);
+}
+
+.panel {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, .08);
+}
+
+.split .panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+input, select {
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 38px;
+}
+
+input.wide { flex: 1; min-width: 280px; }
+
+button.action {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: white;
+  background: #0369a1;
+}
+
+button.warn { background: #b91c1c; }
+
+.results {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+.item {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  background: #f8fafc;
+}
+
+.item:hover { background: #e2e8f0; }
+
+pre.preview {
+  white-space: pre-wrap;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  overflow-x: auto;
+}
+
+.meta {
+  color: #334155;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 901px) {
+  .split { grid-template-columns: 3fr 7fr; }
+}
