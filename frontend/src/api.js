@@ -1,11 +1,11 @@
-const BASE = 'http://localhost:8080/api'
+const BASE = '/api'
 
 async function request(path, options = {}) {
   let res
   try {
     res = await fetch(`${BASE}${path}`, options)
   } catch (error) {
-    throw new Error('백엔드 서버에 연결할 수 없습니다. 백엔드(8080) 실행 상태를 확인하세요.')
+    throw new Error('백엔드 서버에 연결할 수 없습니다. 프론트엔드 컨테이너 프록시 설정을 확인하세요.')
   }
 
   let payload = null
