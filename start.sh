@@ -15,6 +15,10 @@ else
 fi
 
 echo "[start] Building and starting docker compose services..."
+# Some legacy server environments export DOCKER_CONTENT_TRUST=1,
+# which can fail on unsigned/legacy image metadata ("missing signature key").
+export DOCKER_CONTENT_TRUST=0
+
 # For older docker-compose v1 environments, force legacy build path.
 # This avoids passing unsupported flags like --iidfile to old docker clients.
 if [[ "${COMPOSE_CMD[0]}" == "docker-compose" ]]; then
