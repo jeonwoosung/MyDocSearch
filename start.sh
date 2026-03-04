@@ -15,7 +15,13 @@ else
 fi
 
 echo "[start] Building and starting docker compose services..."
-"${COMPOSE_CMD[@]}" up -d --build
+# For older docker-compose v1 environments, force legacy build path.
+# This avoids passing unsupported flags like --iidfile to old docker clients.
+if [[ "${COMPOSE_CMD[0]}" == "docker-compose" ]]; then
+  COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 "${COMPOSE_CMD[@]}" up -d --build
+else
+  "${COMPOSE_CMD[@]}" up -d --build
+fi
 
 echo "[start] Done."
 echo "[start] Frontend: http://localhost:5173"
