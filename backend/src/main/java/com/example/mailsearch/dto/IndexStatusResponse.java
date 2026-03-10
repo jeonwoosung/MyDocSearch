@@ -9,14 +9,27 @@ public class IndexStatusResponse {
     private final int attachmentCount;
     private final int fileCount;
     private final Instant lastIndexedAt;
+    private final Instant lastRebuildAt;
+    private final Instant lastIncrementalAt;
 
-    public IndexStatusResponse(String rootPath, String indexPath, int emlCount, int attachmentCount, int fileCount, Instant lastIndexedAt) {
+    public IndexStatusResponse(
+            String rootPath,
+            String indexPath,
+            int emlCount,
+            int attachmentCount,
+            int fileCount,
+            Instant lastIndexedAt,
+            Instant lastRebuildAt,
+            Instant lastIncrementalAt
+    ) {
         this.rootPath = rootPath;
         this.indexPath = indexPath;
         this.emlCount = emlCount;
         this.attachmentCount = attachmentCount;
         this.fileCount = fileCount;
         this.lastIndexedAt = lastIndexedAt;
+        this.lastRebuildAt = lastRebuildAt;
+        this.lastIncrementalAt = lastIncrementalAt;
     }
 
     public String getRootPath() {
@@ -41,5 +54,13 @@ public class IndexStatusResponse {
 
     public Instant getLastIndexedAt() {
         return lastIndexedAt;
+    }
+
+    public Instant getLastRebuildAt() {
+        return lastRebuildAt;
+    }
+
+    public Instant getLastIncrementalAt() {
+        return lastIncrementalAt;
     }
 }

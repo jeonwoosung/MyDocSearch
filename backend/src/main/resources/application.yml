@@ -14,3 +14,5 @@ app:
   db-path: "./db/mailsearch"
   auth-username: "admin"
   auth-password: "admin"
+  max-extract-bytes: 20971520
+  max-extract-chars: 200000

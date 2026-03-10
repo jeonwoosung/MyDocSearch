@@ -9,6 +9,8 @@ public class AppProperties {
     private String dbPath;
     private String authUsername;
     private String authPassword;
+    private long maxExtractBytes = 20971520L;
+    private int maxExtractChars = 200000;
 
     public String getEmlRoot() {
         return emlRoot;
@@ -48,5 +50,21 @@ public class AppProperties {
 
     public void setAuthPassword(String authPassword) {
         this.authPassword = authPassword;
+    }
+
+    public long getMaxExtractBytes() {
+        return maxExtractBytes;
+    }
+
+    public void setMaxExtractBytes(long maxExtractBytes) {
+        this.maxExtractBytes = maxExtractBytes;
+    }
+
+    public int getMaxExtractChars() {
+        return maxExtractChars;
+    }
+
+    public void setMaxExtractChars(int maxExtractChars) {
+        this.maxExtractChars = maxExtractChars;
     }
 }

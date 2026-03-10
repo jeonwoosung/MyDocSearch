@@ -343,7 +343,9 @@ export default function App() {
               <div>EML 개수: {status.emlCount}</div>
               <div>첨부 개수: {status.attachmentCount}</div>
               <div>문서 파일 개수: {status.fileCount ?? 0}</div>
-              <div>최근 색인 시각: {status.lastIndexedAt || '-'}</div>
+              <div>최종 색인 시각: {status.lastIndexedAt || '-'}</div>
+              <div>최종 전체 색인 시각: {status.lastRebuildAt || '-'}</div>
+              <div>최종 증분 색인 시각: {status.lastIncrementalAt || '-'}</div>
             </div>
           )}
           <div className="drm-list">

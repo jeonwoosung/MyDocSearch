@@ -8,6 +8,7 @@ import com.example.mailsearch.model.AttachmentInfo;
 import com.example.mailsearch.model.EmlParseResult;
 import com.example.mailsearch.util.EmlParser;
 import jakarta.annotation.PostConstruct;
+import org.apache.tika.exception.WriteLimitReachedException;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -29,8 +30,14 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.ParseContext;
 import org.apache.tika.Tika;
+import org.apache.tika.sax.BodyContentHandler;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,17 +81,30 @@ public class IndexService {
     private final AppProperties appProperties;
     private final EmlParser emlParser;
     private final Tika tika = new Tika();
+    private final JdbcTemplate jdbcTemplate;
     private final Object lock = new Object();
     private volatile Instant lastIndexedAt;
+    private volatile Instant lastRebuildAt;
+    private volatile Instant lastIncrementalAt;
 
-    public IndexService(AppProperties appProperties, EmlParser emlParser) {
+    public IndexService(AppProperties appProperties, EmlParser emlParser, JdbcTemplate jdbcTemplate) {
         this.appProperties = appProperties;
         this.emlParser = emlParser;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @PostConstruct
     public void init() throws IOException {
         Files.createDirectories(Paths.get(appProperties.getIndexDir()));
+        jdbcTemplate.execute("""
+                create table if not exists app_metadata (
+                    meta_key varchar(100) primary key,
+                    meta_value varchar(200) not null
+                )
+                """);
+        lastRebuildAt = loadInstant("lastRebuildAt");
+        lastIncrementalAt = loadInstant("lastIncrementalAt");
+        lastIndexedAt = loadLatestIndexInstant();
     }
 
     public IndexOperationResponse rebuild(String requestedRootPath) {
@@ -115,7 +135,9 @@ public class IndexService {
                 throw new RuntimeException("색인 재구성 중 오류가 발생했습니다. 원인: " + rootCauseMessage(e), e);
             }
 
-            lastIndexedAt = Instant.now();
+            lastRebuildAt = Instant.now();
+            lastIndexedAt = lastRebuildAt;
+            saveInstant("lastRebuildAt", lastRebuildAt);
             return new IndexOperationResponse(
                     "색인을 재구성했습니다. (건너뜀: " + skippedCount + ")",
                     emlCount,
@@ -165,7 +187,9 @@ public class IndexService {
                 throw new RuntimeException("색인 갱신 중 오류가 발생했습니다. 원인: " + rootCauseMessage(e), e);
             }
 
-            lastIndexedAt = Instant.now();
+            lastIncrementalAt = Instant.now();
+            lastIndexedAt = loadLatestIndexInstant();
+            saveInstant("lastIncrementalAt", lastIncrementalAt);
             return new IndexOperationResponse(
                     "변경 파일 기준으로 색인을 갱신했습니다. (건너뜀: " + skippedCount + ")",
                     emlCount,
@@ -197,7 +221,7 @@ public class IndexService {
 
             try (Directory directory = openDirectory()) {
                 if (!DirectoryReader.indexExists(directory)) {
-                    return new IndexStatusResponse(appProperties.getEmlRoot(), appProperties.getIndexDir(), 0, 0, 0, lastIndexedAt);
+                    return new IndexStatusResponse(appProperties.getEmlRoot(), appProperties.getIndexDir(), 0, 0, 0, lastIndexedAt, lastRebuildAt, lastIncrementalAt);
                 }
 
                 try (IndexReader reader = DirectoryReader.open(directory)) {
@@ -210,7 +234,7 @@ public class IndexService {
                 throw new RuntimeException("색인 상태 조회 중 오류가 발생했습니다. 원인: " + rootCauseMessage(e), e);
             }
 
-            return new IndexStatusResponse(appProperties.getEmlRoot(), appProperties.getIndexDir(), emlCount, attachmentCount, fileCount, lastIndexedAt);
+            return new IndexStatusResponse(appProperties.getEmlRoot(), appProperties.getIndexDir(), emlCount, attachmentCount, fileCount, lastIndexedAt, lastRebuildAt, lastIncrementalAt);
         }
     }
 
@@ -332,7 +356,9 @@ public class IndexService {
         String extractedText = "";
         if (!isDrm) {
             try {
-                extractedText = nullSafe(tika.parseToString(filePath));
+                if (Files.size(filePath) <= appProperties.getMaxExtractBytes()) {
+                    extractedText = nullSafe(extractTextSafely(filePath));
+                }
             } catch (Exception ignored) {
                 extractedText = "";
             }
@@ -420,6 +446,52 @@ public class IndexService {
 
     private String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String extractTextSafely(Path filePath) throws Exception {
+        AutoDetectParser parser = new AutoDetectParser();
+        BodyContentHandler handler = new BodyContentHandler(appProperties.getMaxExtractChars());
+        Metadata metadata = new Metadata();
+        ParseContext context = new ParseContext();
+
+        try (InputStream in = Files.newInputStream(filePath)) {
+            parser.parse(in, handler, metadata, context);
+        } catch (SAXException e) {
+            // Partial extraction is acceptable for indexing and prevents runaway memory use.
+        }
+
+        return handler.toString();
+    }
+
+    private Instant loadInstant(String key) {
+        try {
+            String value = jdbcTemplate.queryForObject(
+                    "select meta_value from app_metadata where meta_key = ?",
+                    String.class,
+                    key
+            );
+            return value == null ? null : Instant.parse(value);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void saveInstant(String key, Instant value) {
+        jdbcTemplate.update(
+                "merge into app_metadata (meta_key, meta_value) key(meta_key) values (?, ?)",
+                key,
+                value.toString()
+        );
+    }
+
+    private Instant loadLatestIndexInstant() {
+        if (lastRebuildAt == null) {
+            return lastIncrementalAt;
+        }
+        if (lastIncrementalAt == null) {
+            return lastRebuildAt;
+        }
+        return lastRebuildAt.isAfter(lastIncrementalAt) ? lastRebuildAt : lastIncrementalAt;
     }
 
     private String idFor(String sourcePath, String kind, int attachmentIndex) {
