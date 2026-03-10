@@ -11,6 +11,9 @@ backend/target/
 # Runtime index data
 backend/data/lucene-index/
 
+# Embedded database
+db/
+
 # Local environment files
 .env
 .env.*

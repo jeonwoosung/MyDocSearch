@@ -3,7 +3,10 @@ const BASE = '/api'
 async function request(path, options = {}) {
   let res
   try {
-    res = await fetch(`${BASE}${path}`, options)
+    res = await fetch(`${BASE}${path}`, {
+      credentials: 'include',
+      ...options
+    })
   } catch (error) {
     throw new Error('백엔드 서버에 연결할 수 없습니다. 프론트엔드 컨테이너 프록시 설정을 확인하세요.')
   }
@@ -27,6 +30,30 @@ async function request(path, options = {}) {
 
 export async function fetchStatus() {
   return request('/index/status')
+}
+
+export async function fetchMe() {
+  return request('/auth/me')
+}
+
+export async function login(username, password) {
+  return request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  })
+}
+
+export async function logout() {
+  return request('/auth/logout', { method: 'POST' })
+}
+
+export async function changePassword(newPassword) {
+  return request('/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newPassword })
+  })
 }
 
 export async function fetchDrmFiles() {

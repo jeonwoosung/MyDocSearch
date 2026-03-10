@@ -8,9 +8,11 @@ services:
     environment:
       APP_EML_ROOT: "/data/documents"
       APP_INDEX_DIR: "/app/data/index"
+      APP_DB_PATH: "/app/db/mailsearch"
     volumes:
       - "/data/owncloud/_data/files/admin/files/Documents:/data/documents:ro"
       - backend_index:/app/data/index
+      - "./db:/app/db"
     restart: unless-stopped
 
   frontend:

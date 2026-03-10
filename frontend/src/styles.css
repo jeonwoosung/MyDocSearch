@@ -15,11 +15,65 @@ body {
   min-height: 100vh;
 }
 
+.loading-screen,
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  padding: 28px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.15);
+}
+
+.eyebrow {
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.login-copy {
+  color: #475569;
+  margin-bottom: 20px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field span {
+  font-size: 13px;
+  color: #334155;
+}
+
+.form-error {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 .container {
   width: 100%;
   min-height: 100vh;
   margin: 0;
   padding: 24px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 h1 {
@@ -95,6 +149,8 @@ button.action {
 }
 
 button.warn { background: #b91c1c; }
+button.secondary { background: #475569; }
+.login-submit { width: 100%; margin-top: 8px; }
 
 .results {
   display: grid;
@@ -146,6 +202,7 @@ pre.preview {
 
 @media (max-width: 900px) {
   .split { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; }
 }
 
 @media (min-width: 901px) {

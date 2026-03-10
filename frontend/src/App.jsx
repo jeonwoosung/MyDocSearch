@@ -1,19 +1,113 @@
 import { useEffect, useState } from 'react'
 import {
-  fetchStatus,
-  fetchDrmFiles,
-  rebuildIndex,
-  updateIndex,
+  changePassword,
   deleteIndex,
-  search,
   detail,
-  downloadUrl
+  downloadUrl,
+  fetchDrmFiles,
+  fetchMe,
+  fetchStatus,
+  login,
+  logout,
+  rebuildIndex,
+  search,
+  updateIndex
 } from './api'
 
 const DEFAULT_ROOT = '/data/documents'
 
+function LoginScreen({ onLogin, busy, error }) {
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('admin')
+
+  const submit = async (event) => {
+    event.preventDefault()
+    await onLogin(username, password)
+  }
+
+  return (
+    <div className="login-shell">
+      <form className="login-card" onSubmit={submit}>
+        <div className="eyebrow">Mail Search</div>
+        <h1>로그인</h1>
+        <p className="login-copy">색인 관리와 검색 기능은 인증 후 사용할 수 있습니다.</p>
+        <label className="field">
+          <span>아이디</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+        </label>
+        <label className="field">
+          <span>비밀번호</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+        </label>
+        {error && <p className="form-error">{error}</p>}
+        <button className="action login-submit" type="submit" disabled={busy}>
+          {busy ? '로그인 중...' : '로그인'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+function ChangePasswordScreen({ username, onSubmit, busy, error }) {
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (newPassword !== confirmPassword) {
+      return
+    }
+    await onSubmit(newPassword)
+  }
+
+  const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword
+
+  return (
+    <div className="login-shell">
+      <form className="login-card" onSubmit={submit}>
+        <div className="eyebrow">First Login</div>
+        <h1>비밀번호 변경</h1>
+        <p className="login-copy">
+          기본 계정 <strong>{username}</strong> 으로 로그인했습니다. 계속 진행하려면 새 비밀번호를 설정하세요.
+        </p>
+        <label className="field">
+          <span>새 비밀번호</span>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </label>
+        <label className="field">
+          <span>새 비밀번호 확인</span>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </label>
+        {mismatch && <p className="form-error">비밀번호가 일치하지 않습니다.</p>}
+        {error && <p className="form-error">{error}</p>}
+        <button className="action login-submit" type="submit" disabled={busy || mismatch}>
+          {busy ? '변경 중...' : '비밀번호 변경'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState('search')
+  const [authChecked, setAuthChecked] = useState(false)
+  const [user, setUser] = useState(null)
+  const [authBusy, setAuthBusy] = useState(false)
 
   const [rootPath, setRootPath] = useState(DEFAULT_ROOT)
   const [status, setStatus] = useState(null)
@@ -29,31 +123,96 @@ export default function App() {
   const [selected, setSelected] = useState(null)
 
   const refreshStatus = async () => {
-    try {
-      const s = await fetchStatus()
-      setStatus(s)
-      setError('')
-    } catch (e) {
-      setStatus(null)
-      setError(e.message || '백엔드 상태 조회에 실패했습니다.')
-    }
+    const s = await fetchStatus()
+    setStatus(s)
   }
 
   const refreshDrmFiles = async () => {
+    const files = await fetchDrmFiles()
+    setDrmFiles(files)
+  }
+
+  const loadAuthenticatedData = async () => {
     try {
-      const files = await fetchDrmFiles()
-      setDrmFiles(files)
+      const [statusResult, drmResult] = await Promise.all([fetchStatus(), fetchDrmFiles()])
+      setStatus(statusResult)
+      setDrmFiles(drmResult)
       setError('')
     } catch (e) {
+      setStatus(null)
       setDrmFiles([])
-      setError(e.message || 'DRM 파일 목록 조회에 실패했습니다.')
+      setError(e.message || '초기 데이터 조회에 실패했습니다.')
     }
   }
 
   useEffect(() => {
-    refreshStatus()
-    refreshDrmFiles()
+    const bootstrap = async () => {
+      try {
+        const me = await fetchMe()
+        setUser(me)
+        if (!me.mustChangePassword) {
+          await loadAuthenticatedData()
+        }
+      } catch {
+        setUser(null)
+      } finally {
+        setAuthChecked(true)
+      }
+    }
+
+    bootstrap()
   }, [])
+
+  const onLogin = async (username, password) => {
+    setAuthBusy(true)
+    try {
+      const me = await login(username, password)
+      setUser(me)
+      setError('')
+      setMessage('')
+      if (!me.mustChangePassword) {
+        await loadAuthenticatedData()
+      }
+    } catch (e) {
+      setError(e.message || '로그인에 실패했습니다.')
+    } finally {
+      setAuthBusy(false)
+      setAuthChecked(true)
+    }
+  }
+
+  const onChangePassword = async (newPassword) => {
+    setAuthBusy(true)
+    try {
+      const me = await changePassword(newPassword)
+      setUser(me)
+      setError('')
+      await loadAuthenticatedData()
+    } catch (e) {
+      setError(e.message || '비밀번호 변경에 실패했습니다.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  const onLogout = async () => {
+    setAuthBusy(true)
+    try {
+      await logout()
+    } catch {
+      // Ignore logout failures and clear local session view anyway.
+    } finally {
+      setUser(null)
+      setStatus(null)
+      setDrmFiles([])
+      setResults([])
+      setSelected(null)
+      setTotal(0)
+      setMessage('')
+      setError('')
+      setAuthBusy(false)
+    }
+  }
 
   const onRebuild = async () => {
     setBusyAction('rebuild')
@@ -61,8 +220,7 @@ export default function App() {
       const res = await rebuildIndex(rootPath)
       setMessage(`${res.message} (eml: ${res.emlCount}, 첨부: ${res.attachmentCount}, 파일: ${res.fileCount ?? 0})`)
       setError('')
-      refreshStatus()
-      refreshDrmFiles()
+      await loadAuthenticatedData()
     } catch (e) {
       setError(e.message || '재색인에 실패했습니다.')
     } finally {
@@ -76,8 +234,7 @@ export default function App() {
       const res = await updateIndex(rootPath)
       setMessage(`${res.message} (eml: ${res.emlCount}, 첨부: ${res.attachmentCount}, 파일: ${res.fileCount ?? 0})`)
       setError('')
-      refreshStatus()
-      refreshDrmFiles()
+      await loadAuthenticatedData()
     } catch (e) {
       setError(e.message || '증분 갱신에 실패했습니다.')
     } finally {
@@ -94,8 +251,7 @@ export default function App() {
       setResults([])
       setSelected(null)
       setError('')
-      refreshStatus()
-      refreshDrmFiles()
+      await loadAuthenticatedData()
     } catch (e) {
       setError(e.message || '색인 삭제에 실패했습니다.')
     } finally {
@@ -129,15 +285,35 @@ export default function App() {
     }
   }
 
+  if (!authChecked) {
+    return <div className="loading-screen">세션 확인 중...</div>
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={onLogin} busy={authBusy} error={error} />
+  }
+
+  if (user.mustChangePassword) {
+    return <ChangePasswordScreen username={user.username} onSubmit={onChangePassword} busy={authBusy} error={error} />
+  }
+
   return (
     <div className="container">
-      <h1>EML 색인/검색 시스템</h1>
+      <div className="topbar">
+        <div>
+          <h1>EML 색인/검색 시스템</h1>
+          <div className="meta">로그인 사용자: {user.username}</div>
+        </div>
+        <button className="action secondary" onClick={onLogout} disabled={authBusy}>
+          로그아웃
+        </button>
+      </div>
 
       <div className="tabs">
         <button className={tab === 'manage' ? 'active' : ''} onClick={() => setTab('manage')}>색인 관리</button>
         <button className={tab === 'search' ? 'active' : ''} onClick={() => setTab('search')}>검색</button>
       </div>
-      {error && <p style={{ color: '#b91c1c', fontWeight: 700 }}>{error}</p>}
+      {error && <p className="form-error">{error}</p>}
 
       {tab === 'manage' && (
         <div className="panel">
@@ -154,8 +330,9 @@ export default function App() {
             <button className="action warn" onClick={onDelete} disabled={!!busyAction}>
               {busyAction === 'delete' ? '삭제 중...' : '색인 삭제'}
             </button>
-            <button className="action" onClick={refreshStatus} disabled={!!busyAction}>상태 새로고침</button>
-            <button className="action" onClick={refreshDrmFiles} disabled={!!busyAction}>DRM 목록 새로고침</button>
+            <button className="action secondary" onClick={loadAuthenticatedData} disabled={!!busyAction}>
+              상태 새로고침
+            </button>
           </div>
           {busyAction && <p>작업을 처리 중입니다. 첨부파일이 많으면 시간이 오래 걸릴 수 있습니다.</p>}
           {message && <p>{message}</p>}

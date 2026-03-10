@@ -11,7 +11,12 @@ docker compose up -d --build
 
 ### 2) 접속
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:8080
+
+기본 로그인 계정:
+- 아이디: `admin`
+- 비밀번호: `admin`
+
+첫 로그인 시에는 즉시 새 비밀번호를 설정해야 합니다.
 
 ### 3) 색인 루트
 `docker-compose.yml`에서 아래 호스트 경로를 컨테이너 `/data/documents`로 마운트합니다.
@@ -25,6 +30,11 @@ docker compose up -d --build
 ```bash
 docker compose down
 ```
+
+## 내장 DB
+- 내장 DB는 프로젝트 루트 [`/Users/jeon-useong/Documents/New project/db`](/Users/jeon-useong/Documents/New%20project/db)에 생성됩니다.
+- Git에는 포함되지 않도록 `.gitignore`에 제외되어 있습니다.
+- [`/Users/jeon-useong/Documents/New project/stop.sh`](/Users/jeon-useong/Documents/New%20project/stop.sh) 실행 시 DB 백업이 생성되며 최근 3개만 유지합니다.
 
 ## 지원 범위
 - EML 본문 + 첨부파일 텍스트 색인
